@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { Bot, CheckCircle2, AlertCircle, ChevronRight, RefreshCcw } from 'lucide-react';
 import { DetailedFeedback } from '../services/gemini';
 import { Progress } from '@/components/ui/progress';
