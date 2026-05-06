@@ -76,15 +76,15 @@ export const ProgressDashboard: React.FC<ProgressDashboardProps> = ({
       const totalAvailable = MODULES.filter(m => m.language === lang).length;
       
       // Calculate overall accuracy
-      const allScores = Object.values(langProgress.moduleHistory).flatMap(h => h.map(e => e.score));
+      const allScores = Object.values(langProgress.moduleHistory).flatMap(h => (h as { score: number; date: string }[]).map(e => e.score));
       const avgScore = allScores.length > 0 ? allScores.reduce((a, b) => a + b, 0) / allScores.length : 0;
 
       // Prepare data for line chart (score history)
       const chronology = Object.values(langProgress.moduleHistory)
-        .flatMap(h => h)
+        .flatMap(h => h as { score: number; date: string }[])
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
         .slice(-10) // Last 10 results
-        .map((entry, idx) => ({
+        .map((entry: { score: number, date: string }, idx) => ({
           name: `Attempt ${idx + 1}`,
           score: entry.score,
           date: new Date(entry.date).toLocaleDateString()
@@ -197,7 +197,7 @@ export const ProgressDashboard: React.FC<ProgressDashboardProps> = ({
                          {[1, 2, 3, 4, 5].map(i => (
                            <div 
                              key={i} 
-                             className={`w-4 h-2 rounded-full ${i <= (val % 6) ? 'bg-primary' : 'bg-muted'}`} 
+                             className={`w-4 h-2 rounded-full ${i <= ((val as number) % 6) ? 'bg-primary' : 'bg-muted'}`} 
                            />
                          ))}
                        </div>
@@ -366,7 +366,7 @@ export const ProgressDashboard: React.FC<ProgressDashboardProps> = ({
                       </thead>
                       <tbody>
                         {Object.entries(progress[stats.lang]!.moduleHistory)
-                          .flatMap(([id, attempts]) => attempts.map(a => ({ id, ...a })))
+                          .flatMap(([id, attempts]) => (attempts as { score: number; date: string }[]).map(a => ({ id, ...a })))
                           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                           .slice(0, 5)
                           .map((entry, i) => {
