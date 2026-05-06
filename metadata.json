@@ -1,0 +1,7 @@
+{
+  "name": "Remix: Remix: LingoLeap 2",
+  "description": "A comprehensive language learning platform for Malay, Chinese, and English with AI-powered grading and placement tests.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}

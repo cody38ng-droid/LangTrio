@@ -1,0 +1,77 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User account information and aggregate stats",
+      "type": "object",
+      "properties": {
+        "displayName": { "type": "string" },
+        "avatar": { "type": "string" },
+        "totalXp": { "type": "number" },
+        "pointsByLanguage": {
+          "type": "object",
+          "description": "Cumulative points earned in each language"
+        },
+        "badges": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of badge IDs earned by the user"
+        },
+        "globalStats": {
+          "type": "object",
+          "properties": {
+            "streak": { "type": "number" },
+            "lastCheckIn": { "type": "string", "format": "date-time" },
+            "unlockedBackgrounds": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "lastActive": { "type": "string", "format": "date-time" }
+      },
+      "required": ["displayName", "totalXp"]
+    },
+    "UserProgress": {
+      "title": "Language Progress",
+      "description": "Per-language progress and SRS data",
+      "type": "object",
+      "properties": {
+        "language": { "type": "string" },
+        "overallLevel": { "type": "string" },
+        "sectionLevels": { "type": "object" },
+        "sectionStreaks": { "type": "object" },
+        "completedModules": { "type": "array", "items": { "type": "string" } },
+        "moduleHistory": { "type": "object" },
+        "srsItems": { "type": "array" },
+        "earnedBadges": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "Score": {
+      "title": "Activity Score",
+      "description": "Individual score entry for a module completion",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userAvatar": { "type": "string" },
+        "language": { "type": "string" },
+        "score": { "type": "number" },
+        "xpGained": { "type": "number" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "language", "score", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Public user profiles"
+    },
+    "/users/{userId}/progress/{language}": {
+      "schema": "UserProgress",
+      "description": "Per-language detailed progress"
+    },
+    "/scores/{scoreId}": {
+      "schema": "Score",
+      "description": "Global leaderboard entries"
+    }
+  }
+}
