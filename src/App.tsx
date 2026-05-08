@@ -1058,6 +1058,19 @@ export default function App() {
     }
   }, []);
 
+  // --- Lifted Hooks for Rules of Hooks compliance ---
+  const placementQuestion = (language && PLACEMENT_QUESTIONS[language] && PLACEMENT_QUESTIONS[language][testStep]) || null;
+  const shuffledPlacementOptions = useMemo(() => {
+    if (!placementQuestion || !placementQuestion.options) return [];
+    return [...placementQuestion.options].sort(() => Math.random() - 0.5);
+  }, [placementQuestion?.id, testStep, language]);
+
+  const currentModuleQuestion = (currentModule && language && currentModule.questions[moduleStep]) ? currentModule.questions[moduleStep] : null;
+  const shuffledModuleOptions = useMemo(() => {
+    if (!currentModuleQuestion || !currentModuleQuestion.options) return [];
+    return [...currentModuleQuestion.options].sort(() => Math.random() - 0.5);
+  }, [currentModuleQuestion?.id, moduleStep, currentModule?.id]);
+
   const startTest = (lang: Language) => {
     setLanguage(lang);
     if (progress[lang]) {
@@ -1747,15 +1760,8 @@ export default function App() {
   );
 
   const renderPlacementTest = () => {
-    if (!language) return null;
-    const question = PLACEMENT_QUESTIONS[language][testStep];
+    if (!language || !placementQuestion) return null;
     const totalSteps = PLACEMENT_QUESTIONS[language].length;
-
-    // Use useMemo to stabilize shuffled options for the current question
-    const shuffledOptions = useMemo(() => {
-      if (!question.options) return [];
-      return [...question.options].sort(() => Math.random() - 0.5);
-    }, [question.id, testStep]);
 
     return (
       <div className="max-w-2xl mx-auto py-12 px-4">
@@ -1779,10 +1785,10 @@ export default function App() {
               <span className="text-sm font-medium text-muted-foreground">Question {testStep + 1} of {totalSteps}</span>
             </div>
             <Progress value={((testStep + 1) / totalSteps) * 100} className="h-2" />
-            <CardTitle className="text-2xl mt-6 leading-relaxed">{question.question}</CardTitle>
+            <CardTitle className="text-2xl mt-6 leading-relaxed">{placementQuestion.question}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 pt-4">
-            {shuffledOptions.map((option) => (
+            {shuffledPlacementOptions.map((option) => (
               <Button
                 key={option}
                 variant="outline"
@@ -2096,15 +2102,8 @@ export default function App() {
   };
 
   const renderModule = () => {
-    if (!currentModule || !language) return null;
-    const question = currentModule.questions[moduleStep];
+    if (!currentModule || !language || !currentModuleQuestion) return null;
     const totalSteps = currentModule.questions.length;
-
-    // Use useMemo to stabilize shuffled options for the current question
-    const shuffledOptions = useMemo(() => {
-      if (!question.options) return [];
-      return [...question.options].sort(() => Math.random() - 0.5);
-    }, [question.id, moduleStep]);
 
     return (
       <div className="max-w-3xl mx-auto py-12 px-4">
@@ -2151,23 +2150,23 @@ export default function App() {
               </div>
             </div>
             <CardTitle className="text-3xl font-bold leading-tight flex flex-col items-center text-center">
-              {language === 'Chinese' && question.pinyin && question.question.includes('“') ? (
+              {language === 'Chinese' && currentModuleQuestion.pinyin && currentModuleQuestion.question.includes('“') ? (
                 <div className="flex flex-col items-center space-y-4 w-full">
-                  <span className="text-xl opacity-60">{question.question.split('“')[0]}</span>
+                  <span className="text-xl opacity-60">{currentModuleQuestion.question.split('“')[0]}</span>
                   <div className="flex flex-col items-center p-8 bg-primary/5 rounded-[2.5rem] border-2 border-primary/10 w-full max-w-2xl">
                     <ChineseRubyText 
-                      text={question.question.match(/“([^”]+)”/)?.[1] || question.question} 
-                      pinyin={question.pinyin.replace(/[.,!?;:]/g, '')} 
+                      text={currentModuleQuestion.question.match(/“([^”]+)”/)?.[1] || currentModuleQuestion.question} 
+                      pinyin={currentModuleQuestion.pinyin.replace(/[.,!?;:]/g, '')} 
                     />
                   </div>
-                  {question.question.split('”')[1] && <span className="text-xl opacity-60">{question.question.split('”')[1]}</span>}
+                  {currentModuleQuestion.question.split('”')[1] && <span className="text-xl opacity-60">{currentModuleQuestion.question.split('”')[1]}</span>}
                 </div>
               ) : (
                 <>
-                  {language === 'Chinese' && question.pinyin ? (
-                    <ChineseRubyText text={question.question} pinyin={question.pinyin.replace(/[.,!?;:]/g, '')} />
+                  {language === 'Chinese' && currentModuleQuestion.pinyin ? (
+                    <ChineseRubyText text={currentModuleQuestion.question} pinyin={currentModuleQuestion.pinyin.replace(/[.,!?;:]/g, '')} />
                   ) : (
-                    <span>{question.question}</span>
+                    <span>{currentModuleQuestion.question}</span>
                   )}
                 </>
               )}
@@ -2175,14 +2174,14 @@ export default function App() {
           </CardHeader>
 
           <CardContent className="pt-8 space-y-8">
-            {(question.type === 'Listening' || question.type === 'Comprehension' || question.type === 'Vocabulary' || question.type === 'Grammar') && (
+            {(currentModuleQuestion.type === 'Listening' || currentModuleQuestion.type === 'Comprehension' || currentModuleQuestion.type === 'Vocabulary' || currentModuleQuestion.type === 'Grammar') && (
               <div className="flex flex-col items-center space-y-6">
-                {question.type === 'Listening' && (
+                {currentModuleQuestion.type === 'Listening' && (
                   <>
                     <Button 
                       size="lg" 
                       className="rounded-full w-24 h-24 shadow-lg hover:scale-105 transition-transform"
-                      onClick={() => speakText(question.audioText || '', language)}
+                      onClick={() => speakText(currentModuleQuestion.audioText || '', language)}
                     >
                       <Play className="w-10 h-10 fill-current" />
                     </Button>
@@ -2190,14 +2189,14 @@ export default function App() {
                   </>
                 )}
                 
-                <div className={`grid grid-cols-1 ${question.type === 'Listening' ? 'sm:grid-cols-2' : ''} gap-4 w-full`}>
-                  {shuffledOptions.map((opt) => (
+                <div className={`grid grid-cols-1 ${currentModuleQuestion.type === 'Listening' ? 'sm:grid-cols-2' : ''} gap-4 w-full`}>
+                  {shuffledModuleOptions.map((opt) => (
                     <Button 
                       key={opt} 
                       variant="outline" 
                       disabled={!!feedback}
-                      className={`h-16 text-lg hover:bg-primary/5 hover:border-primary px-6 ${feedback && opt === question.correctAnswer ? 'bg-green-500/10 border-green-500 text-green-700' : feedback && opt !== question.correctAnswer ? 'opacity-50' : ''}`}
-                      onClick={() => handleItemResult(question, opt === question.correctAnswer, opt === question.correctAnswer ? 100 : 0)}
+                      className={`h-16 text-lg hover:bg-primary/5 hover:border-primary px-6 ${feedback && opt === currentModuleQuestion.correctAnswer ? 'bg-green-500/10 border-green-500 text-green-700' : feedback && opt !== currentModuleQuestion.correctAnswer ? 'opacity-50' : ''}`}
+                      onClick={() => handleItemResult(currentModuleQuestion, opt === currentModuleQuestion.correctAnswer, opt === currentModuleQuestion.correctAnswer ? 100 : 0)}
                     >
                       {opt}
                     </Button>
@@ -2206,7 +2205,7 @@ export default function App() {
               </div>
             )}
 
-            {question.type === 'Writing' && (
+            {currentModuleQuestion.type === 'Writing' && (
               <div className="space-y-6">
                 <textarea
                   className="w-full min-h-[200px] p-6 rounded-2xl border-2 border-muted focus:border-primary focus:ring-0 transition-all text-lg resize-none bg-muted/20"
@@ -2228,7 +2227,7 @@ export default function App() {
               </div>
             )}
 
-            {question.type === 'Speaking' && (
+            {currentModuleQuestion.type === 'Speaking' && (
               <div className="flex flex-col items-center space-y-8">
                 <div className="relative">
                   <AnimatePresence>
@@ -2278,7 +2277,7 @@ export default function App() {
               <AIFeedback 
                 feedback={detailedFeedback} 
                 score={lastScore || 0}
-                showRetry={question.type === 'Speaking'}
+                showRetry={currentModuleQuestion.type === 'Speaking'}
                 onRetry={handleRetryStep}
                 onContinue={() => {
                   if (moduleScore === -1) {
@@ -2305,19 +2304,19 @@ export default function App() {
                 
                 <p className="text-lg leading-relaxed text-muted-foreground italic text-center">"{feedback}"</p>
                 
-                {question.explanation && (
+                {currentModuleQuestion.explanation && (
                   <div className="p-4 bg-primary/10 rounded-2xl border border-primary/20">
                     <p className="text-xs font-black uppercase text-primary mb-1 flex items-center gap-1">
                       <Bot className="w-3 h-3" /> Teacher's Explanation
                     </p>
                     <p className="text-sm text-primary/80 leading-relaxed font-medium">
-                      {question.explanation}
+                      {currentModuleQuestion.explanation}
                     </p>
                   </div>
                 )}
                 
                 <div className="flex flex-col sm:flex-row gap-3">
-                  {moduleScore !== -1 && question.type === 'Speaking' && (
+                  {moduleScore !== -1 && currentModuleQuestion.type === 'Speaking' && (
                     <Button 
                       variant="outline" 
                       className="flex-1 h-14 text-lg rounded-xl border-2 font-bold" 
