@@ -76,15 +76,16 @@ export const ProgressDashboard: React.FC<ProgressDashboardProps> = ({
       const totalAvailable = MODULES.filter(m => m.language === lang).length;
       
       // Calculate overall accuracy
-      const allScores = Object.values(langProgress.moduleHistory).flatMap(h => (h as { score: number; date: string }[]).map(e => e.score));
+      const historyValues = Object.values(langProgress.moduleHistory) as { score: number; date: string }[][];
+      const allScores = historyValues.flatMap(h => h.map(e => e.score));
       const avgScore = allScores.length > 0 ? allScores.reduce((a, b) => a + b, 0) / allScores.length : 0;
 
       // Prepare data for line chart (score history)
-      const chronology = Object.values(langProgress.moduleHistory)
-        .flatMap(h => h as { score: number; date: string }[])
+      const chronology = historyValues
+        .flatMap(h => h)
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
         .slice(-10) // Last 10 results
-        .map((entry: { score: number, date: string }, idx) => ({
+        .map((entry, idx) => ({
           name: `Attempt ${idx + 1}`,
           score: entry.score,
           date: new Date(entry.date).toLocaleDateString()
@@ -190,14 +191,14 @@ export const ProgressDashboard: React.FC<ProgressDashboardProps> = ({
 
                 <div className="pt-4 border-t space-y-4">
                    <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Skill Weaknesses</h4>
-                   {Object.entries(stats.streaks).map(([skill, val]) => (
+                   {Object.entries(stats.streaks as Record<string, number>).map(([skill, val]) => (
                      <div key={skill} className="flex items-center justify-between">
                        <span className="text-sm font-medium">{skill}</span>
                        <div className="flex gap-0.5">
                          {[1, 2, 3, 4, 5].map(i => (
                            <div 
                              key={i} 
-                             className={`w-4 h-2 rounded-full ${i <= ((val as number) % 6) ? 'bg-primary' : 'bg-muted'}`} 
+                             className={`w-4 h-2 rounded-full ${i <= (val % 6) ? 'bg-primary' : 'bg-muted'}`} 
                            />
                          ))}
                        </div>
@@ -365,8 +366,8 @@ export const ProgressDashboard: React.FC<ProgressDashboardProps> = ({
                         </tr>
                       </thead>
                       <tbody>
-                        {Object.entries(progress[stats.lang]!.moduleHistory)
-                          .flatMap(([id, attempts]) => (attempts as { score: number; date: string }[]).map(a => ({ id, ...a })))
+                        {(Object.entries(progress[stats.lang]!.moduleHistory) as [string, { score: number; date: string }[]][])
+                          .flatMap(([id, attempts]) => attempts.map(a => ({ id, ...a })))
                           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                           .slice(0, 5)
                           .map((entry, i) => {
