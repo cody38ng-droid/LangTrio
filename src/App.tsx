@@ -48,10 +48,10 @@ import { ProgressDashboard } from './components/ProgressDashboard';
 import { AIFeedback } from './components/AIFeedback';
 import { BreakGame } from './components/BreakGame';
 import { ChineseRubyText } from './components/ChineseRubyText';
-import { auth, db, googleProvider } from './lib/firebase';
+import { AuthModal } from './components/AuthModal';
+import { auth, db } from './lib/firebase';
 import { 
   onAuthStateChanged, 
-  signInWithPopup, 
   signOut, 
   User as FirebaseUser 
 } from 'firebase/auth';
@@ -137,6 +137,7 @@ export default function App() {
   const [liveLeaderboard, setLiveLeaderboard] = useState<any[]>([]);
   const [isLeaderboardLoading, setIsLeaderboardLoading] = useState(false);
   const [isAIChatOpen, setIsAIChatOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [showBreakGame, setShowBreakGame] = useState(false);
   const [breakTimeRemaining, setBreakTimeRemaining] = useState(300); // 5 minutes total break time
   const breakTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -366,13 +367,8 @@ export default function App() {
     return () => unsubscribe();
   }, [leaderboardOpen.open, leaderboardOpen.lang, leaderboardTab]);
 
-  const handleLogin = async () => {
-    try {
-      await signInWithPopup(auth, googleProvider);
-      toast.success("Welcome to LingoLeap!");
-    } catch (e) {
-      toast.error("Auth failed. Please try again.");
-    }
+  const handleLogin = () => {
+    setIsAuthModalOpen(true);
   };
 
   const handleLogout = () => {
@@ -1930,6 +1926,10 @@ export default function App() {
                 Sign In
               </Button>
             )}
+            <AuthModal 
+              isOpen={isAuthModalOpen} 
+              onClose={() => setIsAuthModalOpen(false)} 
+            />
             <Button 
                variant="ghost"
                size="sm" 
