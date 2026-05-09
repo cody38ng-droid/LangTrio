@@ -130,7 +130,7 @@ export const ProgressDashboard: React.FC<ProgressDashboardProps> = ({
   }
 
   return (
-    <div className="space-y-8 p-1 md:p-4">
+    <div className="space-y-12 p-2 md:p-6 pb-20">
       {statsByLanguage.map((stats) => (
         <motion.div
           key={stats.lang}
@@ -216,7 +216,7 @@ export const ProgressDashboard: React.FC<ProgressDashboardProps> = ({
                 </CardTitle>
                 <CardDescription>Visualizing your last 10 module attempts</CardDescription>
               </CardHeader>
-              <CardContent className="h-[300px]">
+              <CardContent className="h-[450px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={stats.chronology}>
                     <defs>
@@ -331,7 +331,7 @@ export const ProgressDashboard: React.FC<ProgressDashboardProps> = ({
                     <Award className="w-4 h-4" /> Skill Balance
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="h-[250px]">
+                <CardContent className="h-[400px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <RadarChart cx="50%" cy="50%" outerRadius="80%" data={stats.skillData}>
                       <PolarGrid strokeOpacity={0.1} />

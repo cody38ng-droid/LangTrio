@@ -1251,11 +1251,11 @@ export default function App() {
               <Button
                 key={option}
                 variant="outline"
-                className="w-full justify-start text-left h-auto py-4 px-6 text-lg hover:bg-primary/5 hover:border-primary transition-all"
+                className="w-full justify-start text-left h-auto py-4 px-6 text-lg whitespace-normal hover:bg-primary/5 hover:border-primary transition-all"
                 onClick={() => handleTestAnswer(option)}
                 disabled={isEvaluating}
               >
-                {option}
+                <span className="w-full">{option}</span>
               </Button>
             ))}
           </CardContent>
@@ -1654,10 +1654,10 @@ export default function App() {
                       key={opt} 
                       variant="outline" 
                       disabled={!!feedback}
-                      className={`h-16 text-lg hover:bg-primary/5 hover:border-primary px-6 ${feedback && opt === currentModuleQuestion.correctAnswer ? 'bg-green-500/10 border-green-500 text-green-700' : feedback && opt !== currentModuleQuestion.correctAnswer ? 'opacity-50' : ''}`}
+                      className={`min-h-[4rem] h-auto py-4 text-lg whitespace-normal text-left justify-start hover:bg-primary/5 hover:border-primary px-6 ${feedback && opt === currentModuleQuestion.correctAnswer ? 'bg-green-500/10 border-green-500 text-green-700' : feedback && opt !== currentModuleQuestion.correctAnswer ? 'opacity-50' : ''}`}
                       onClick={() => handleItemResult(currentModuleQuestion, opt === currentModuleQuestion.correctAnswer, opt === currentModuleQuestion.correctAnswer ? 100 : 0)}
                     >
-                      {opt}
+                      <span className="w-full">{opt}</span>
                     </Button>
                   ))}
                 </div>
@@ -2131,17 +2131,19 @@ export default function App() {
 
       {/* Progress Dashboard Dialog */}
       <Dialog open={showProgressDashboard} onOpenChange={setShowProgressDashboard}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col p-0">
-          <DialogHeader className="p-6 border-b">
+        <DialogContent className="max-w-[95vw] w-[95vw] md:max-w-[90vw] md:w-[90vw] h-[95vh] md:h-[90vh] max-h-[95vh] md:max-h-[90vh] overflow-hidden flex flex-col p-0 rounded-3xl border-none shadow-2xl">
+          <DialogHeader className="p-8 border-b bg-muted/10 backdrop-blur-md">
             <div className="flex items-center justify-between">
               <div>
-                <DialogTitle className="text-3xl font-black">Learning Analytics</DialogTitle>
-                <DialogDescription>Track your proficiency growth across all languages.</DialogDescription>
+                <DialogTitle className="text-4xl font-black tracking-tight text-primary">Learning Analytics</DialogTitle>
+                <DialogDescription className="text-lg font-medium text-muted-foreground mt-1">
+                  Comprehensive performance analysis across your language journey.
+                </DialogDescription>
               </div>
             </div>
           </DialogHeader>
           <ScrollArea className="flex-1 overflow-y-auto">
-            <div className="p-6">
+            <div className="p-8 md:p-12">
               <ProgressDashboard 
                 progress={progress} 
                 onClose={() => setShowProgressDashboard(false)}
