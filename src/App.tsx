@@ -24,7 +24,9 @@ import {
   Medal,
   Users,
   RefreshCcw,
-  Clock
+  Clock,
+  MessageSquare,
+  LogOut
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -49,7 +51,7 @@ import { AIFeedback } from './components/AIFeedback';
 import { BreakGame } from './components/BreakGame';
 import { ChineseRubyText } from './components/ChineseRubyText';
 import { AuthModal } from './components/AuthModal';
-import { auth, db } from './lib/firebase';
+import { auth, db, handleFirestoreError, OperationType } from './lib/firebase';
 import { 
   onAuthStateChanged, 
   signOut, 
@@ -138,6 +140,7 @@ export default function App() {
   const [isLeaderboardLoading, setIsLeaderboardLoading] = useState(false);
   const [isAIChatOpen, setIsAIChatOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [showBreakGame, setShowBreakGame] = useState(false);
   const [breakTimeRemaining, setBreakTimeRemaining] = useState(300); // 5 minutes total break time
   const breakTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -233,59 +236,65 @@ export default function App() {
       setUser(firebaseUser);
       if (firebaseUser) {
         const userDocRef = doc(db, 'users', firebaseUser.uid);
-        const userDoc = await getDoc(userDocRef);
-        
-        if (!userDoc.exists()) {
-          const initialStats = {
-            streak: globalStats.streak || 1,
-            lastCheckIn: globalStats.lastCheckIn || new Date().toISOString(),
-            unlockedBackgrounds: globalStats.unlockedBackgrounds || ['default']
-          };
+        try {
+          const userDoc = await getDoc(userDocRef);
           
-          await setDoc(userDocRef, {
-            displayName: firebaseUser.displayName || 'Learner',
-            avatar: firebaseUser.photoURL || '👤',
-            totalXp: 0,
-            lastActive: serverTimestamp(),
-            globalStats: initialStats
-          });
-          
-          // Seed initial progress from local if exists
-          const languages: Language[] = ['English', 'Malay', 'Chinese'];
-          for (const lang of languages) {
-            const localProg = progress[lang];
-            if (localProg) {
-              await setDoc(doc(db, 'users', firebaseUser.uid, 'progress', lang), localProg);
+          if (!userDoc.exists()) {
+            const initialStats = {
+              streak: globalStats.streak || 1,
+              lastCheckIn: globalStats.lastCheckIn || new Date().toISOString(),
+              unlockedBackgrounds: globalStats.unlockedBackgrounds || ['default']
+            };
+            
+            await setDoc(userDocRef, {
+              displayName: firebaseUser.displayName || 'Learner',
+              avatar: firebaseUser.photoURL || '👤',
+              totalXp: 0,
+              lastActive: serverTimestamp(),
+              globalStats: initialStats,
+              email: firebaseUser.email,
+              createdAt: serverTimestamp()
+            });
+            
+            // Seed initial progress from local if exists
+            const languages: Language[] = ['English', 'Malay', 'Chinese'];
+            for (const lang of languages) {
+              const localProg = progress[lang];
+              if (localProg) {
+                await setDoc(doc(db, 'users', firebaseUser.uid, 'progress', lang), localProg);
+              }
             }
-          }
-        } else {
-          const data = userDoc.data();
-          if (data.globalStats) {
-            setGlobalStats(data.globalStats);
-          }
-          await setDoc(userDocRef, { lastActive: serverTimestamp() }, { merge: true });
+          } else {
+            const data = userDoc.data();
+            if (data?.globalStats) {
+              setGlobalStats(data.globalStats);
+            }
+            await setDoc(userDocRef, { lastActive: serverTimestamp() }, { merge: true });
 
-          // Load language progress
-          const languages: Language[] = ['English', 'Malay', 'Chinese'];
-          const newProgress: Record<Language, UserProgress | null> = { ...progress };
-          
-          let hasCloudData = false;
-          for (const lang of languages) {
-            const progDoc = await getDoc(doc(db, 'users', firebaseUser.uid, 'progress', lang));
-            if (progDoc.exists()) {
-              newProgress[lang] = progDoc.data() as UserProgress;
-              hasCloudData = true;
+            // Load language progress
+            const languages: Language[] = ['English', 'Malay', 'Chinese'];
+            const newProgress: Record<Language, UserProgress | null> = { ...progress };
+            
+            let hasCloudData = false;
+            for (const lang of languages) {
+              const progDoc = await getDoc(doc(db, 'users', firebaseUser.uid, 'progress', lang));
+              if (progDoc.exists()) {
+                newProgress[lang] = progDoc.data() as UserProgress;
+                hasCloudData = true;
+              }
+            }
+            
+            if (hasCloudData) {
+              setProgress(newProgress);
             }
           }
-          
-          if (hasCloudData) {
-            setProgress(newProgress);
-          }
+          toast.success(`Welcome back, ${firebaseUser.displayName || 'Learner'}! Progress synced.`);
+        } catch (error) {
+          handleFirestoreError(error, OperationType.GET, `users/${firebaseUser.uid}`);
         }
-        toast.success(`Welcome back, ${firebaseUser.displayName}! Progress synced.`);
       } else {
         // Handle Logout: Reload from localStorage or reset
-        const saved = localStorage.getItem('lingoleap_progress');
+        const saved = localStorage.getItem('langtrio_progress') || localStorage.getItem('lingoleap_progress');
         if (saved) {
           try {
             setProgress(JSON.parse(saved));
@@ -294,7 +303,7 @@ export default function App() {
           }
         }
         
-        const savedGlobal = localStorage.getItem('lingoleap_global');
+        const savedGlobal = localStorage.getItem('langtrio_global') || localStorage.getItem('lingoleap_global');
         if (savedGlobal) {
           try {
             setGlobalStats(JSON.parse(savedGlobal));
@@ -326,48 +335,54 @@ export default function App() {
       where('language', '==', leaderboardOpen.lang)
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const userAggregates: Record<string, any> = {};
-      
-      snapshot.docs.forEach(doc => {
-        const data = doc.data();
-        const uid = data.userId;
-        if (!uid) return;
-
-        // If Weekly tab, filter records older than 7 days
-        if (leaderboardTab === 'weekly') {
-          const ts = data.timestamp?.toMillis ? data.timestamp.toMillis() : 0;
-          if (ts < threshold) return;
-        }
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const userAggregates: Record<string, any> = {};
         
-        if (!userAggregates[uid]) {
-          userAggregates[uid] = {
-            id: uid,
-            userName: data.userName || 'Student',
-            userAvatar: data.userAvatar || '🎓',
-            score: 0,
-            language: data.language,
-            isMe: uid === auth.currentUser?.uid
-          };
-        }
-        userAggregates[uid].score += (data.score || 0);
-      });
+        snapshot.docs.forEach(doc => {
+          const data = doc.data();
+          const uid = data.userId;
+          if (!uid) return;
 
-      const records = Object.values(userAggregates)
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 20);
-      
-      setLiveLeaderboard(records);
-      setIsLeaderboardLoading(false);
-    }, (error) => {
-      console.error("Leaderboard Error:", error);
-      setIsLeaderboardLoading(false);
-    });
+          // If Weekly tab, filter records older than 7 days
+          if (leaderboardTab === 'weekly') {
+            const ts = data.timestamp?.toMillis ? data.timestamp.toMillis() : 0;
+            if (ts < threshold) return;
+          }
+          
+          if (!userAggregates[uid]) {
+            userAggregates[uid] = {
+              id: uid,
+              userName: data.userName || 'Student',
+              userAvatar: data.userAvatar || '🎓',
+              score: 0,
+              language: data.language,
+              isMe: uid === auth.currentUser?.uid
+            };
+          }
+          userAggregates[uid].score += (data.score || 0);
+        });
+
+        const records = Object.values(userAggregates)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 20);
+        
+        setLiveLeaderboard(records);
+        setIsLeaderboardLoading(false);
+      }, (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'scores');
+        setIsLeaderboardLoading(false);
+      });
 
     return () => unsubscribe();
   }, [leaderboardOpen.open, leaderboardOpen.lang, leaderboardTab]);
 
   const handleLogin = () => {
+    setAuthMode('login');
+    setIsAuthModalOpen(true);
+  };
+
+  const handleSignUp = () => {
+    setAuthMode('signup');
     setIsAuthModalOpen(true);
   };
 
@@ -386,7 +401,7 @@ export default function App() {
         await addDoc(collection(db, 'scores'), {
           userId: auth.currentUser.uid,
           userName: auth.currentUser.displayName || 'Learner',
-          userAvatar: '🎓', 
+          userAvatar: auth.currentUser.photoURL || '🎓', 
           language: lang,
           score: scoreVal,
           xpGained: xpGained,
@@ -407,7 +422,7 @@ export default function App() {
 
         await setDoc(userRef, updateData, { merge: true });
       } catch (error) {
-        console.error("Firestore Save Error:", error);
+        handleFirestoreError(error, OperationType.WRITE, `scores/users/${auth.currentUser?.uid}`);
       }
     })();
   };
@@ -462,7 +477,7 @@ export default function App() {
 
   // Save progress to LocalStorage & Firestore
   useEffect(() => {
-    localStorage.setItem('lingoleap_progress', JSON.stringify(progress));
+    localStorage.setItem('langtrio_progress', JSON.stringify(progress));
     
     if (user) {
       // Background sync for each language that has progress
@@ -476,14 +491,14 @@ export default function App() {
             }
           }
         } catch (e) {
-          console.error("Cloud Sync Error (Progress):", e);
+          handleFirestoreError(e, OperationType.WRITE, `users/${user.uid}/progress`);
         }
       })();
     }
   }, [progress, user]);
 
   useEffect(() => {
-    localStorage.setItem('lingoleap_global', JSON.stringify(globalStats));
+    localStorage.setItem('langtrio_global', JSON.stringify(globalStats));
     
     if (user) {
       (async () => {
@@ -491,7 +506,7 @@ export default function App() {
           const userRef = doc(db, 'users', user.uid);
           await setDoc(userRef, { globalStats }, { merge: true });
         } catch (e) {
-          console.error("Cloud Sync Error (Global):", e);
+          handleFirestoreError(e, OperationType.WRITE, `users/${user.uid}/stats`);
         }
       })();
     }
@@ -1085,10 +1100,32 @@ export default function App() {
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-center space-y-4"
+        className="text-center space-y-6 pt-12"
       >
-        <h1 className={`text-6xl font-black tracking-tighter drop-shadow-sm ${selectedBg === 'midnight' ? 'text-white' : 'text-primary'}`}>Lang Trio</h1>
-        <p className={`text-xl font-medium ${selectedBg === 'midnight' ? 'text-slate-300' : 'text-muted-foreground'}`}>Master a new language with AI-powered practice</p>
+        <h1 className={`text-6xl md:text-8xl font-black tracking-tighter drop-shadow-sm ${selectedBg === 'midnight' ? 'text-white' : 'text-primary'}`}>Lang Trio</h1>
+        <p className={`text-xl md:text-2xl font-medium max-w-2xl mx-auto px-6 ${selectedBg === 'midnight' ? 'text-slate-300' : 'text-muted-foreground'}`}>
+          Master a new language with the power of AI. Practice speaking, writing, and comprehension in real-time.
+        </p>
+
+        {!user && (
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+            <Button 
+              size="lg" 
+              className="w-full sm:w-auto h-14 px-10 rounded-2xl text-lg font-black shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
+              onClick={handleSignUp}
+            >
+              Start Free Today <ChevronRight className="ml-2 w-5 h-5" />
+            </Button>
+            <Button 
+              variant="outline"
+              size="lg" 
+              className={`w-full sm:w-auto h-14 px-10 rounded-2xl text-lg font-black border-2 transition-all hover:scale-105 active:scale-95 ${selectedBg === 'midnight' ? 'bg-slate-800/50 border-slate-700 text-white hover:bg-slate-700' : 'bg-white/50 border-primary/20 text-primary hover:bg-primary/5'}`}
+              onClick={handleLogin}
+            >
+              Sign In
+            </Button>
+          </div>
+        )}
       </motion.div>
 
       <div className="flex flex-wrap items-center justify-center gap-3 px-4 mb-4">
@@ -1114,13 +1151,9 @@ export default function App() {
         </Button>
         
         <Dialog>
-          <DialogTrigger 
-            render={
-              <Button variant="outline" size="lg" className={`rounded-full px-6 shadow-lg backdrop-blur-sm ${selectedBg === 'midnight' ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white/50'}`}>
-                <Palette className="mr-2 w-5 h-5" /> Inventory
-              </Button>
-            }
-          />
+          <DialogTrigger render={<Button variant="outline" size="lg" className={`rounded-full px-6 shadow-lg backdrop-blur-sm border-2 transition-all active:scale-95 ${selectedBg === 'midnight' ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white/50 border-primary/20 text-primary hover:bg-primary/10'}`} />}>
+            <Palette className="mr-2 w-5 h-5" /> Inventory
+          </DialogTrigger>
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>Background Inventory</DialogTitle>
@@ -1904,7 +1937,17 @@ export default function App() {
             <span className="text-2xl font-black tracking-tighter text-primary">Lang Trio</span>
           </div>
           
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2 md:space-x-4">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className={`flex items-center space-x-2 font-bold rounded-xl transition-all hover:scale-105 active:scale-95 ${selectedBg === 'midnight' ? 'text-white hover:bg-slate-800' : 'text-muted-foreground hover:text-primary hover:bg-primary/5'}`}
+              onClick={() => window.open('https://forms.gle/u13vvVfQazf5t4Ws5', '_blank')}
+            >
+              <MessageSquare className="w-4 h-4 text-primary" />
+              <span className="hidden sm:inline">Feedback</span>
+            </Button>
+
             {user ? (
               <Button 
                 variant="ghost" 
@@ -1918,18 +1961,29 @@ export default function App() {
                 <span className="hidden sm:inline">Logout</span>
               </Button>
             ) : (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="border-primary text-primary hover:bg-primary/5 font-bold rounded-xl"
-                onClick={handleLogin}
-              >
-                Sign In
-              </Button>
+              <>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className={`hidden sm:flex font-bold rounded-xl ${selectedBg === 'midnight' ? 'text-white hover:bg-slate-800' : 'text-muted-foreground hover:text-primary hover:bg-primary/5'}`}
+                  onClick={handleLogin}
+                >
+                  Sign In
+                </Button>
+                <Button 
+                  variant="default" 
+                  size="sm" 
+                  className="bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-105 transition-all"
+                  onClick={handleSignUp}
+                >
+                  Sign Up
+                </Button>
+              </>
             )}
             <AuthModal 
               isOpen={isAuthModalOpen} 
               onClose={() => setIsAuthModalOpen(false)} 
+              initialMode={authMode}
             />
             <Button 
                variant="ghost"

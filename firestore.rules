@@ -31,19 +31,21 @@ service cloud.firestore {
 
     function isValidUser(data) {
       return data.keys().hasAll(['displayName', 'totalXp']) &&
-             data.keys().size() <= 15 &&
-             data.displayName is string && data.displayName.size() <= 50 &&
+             data.keys().size() <= 20 &&
+             data.displayName is string && data.displayName.size() <= 100 &&
              data.totalXp is number && data.totalXp >= 0 &&
-             (!('avatar' in data) || (data.avatar is string && data.avatar.size() <= 200)) &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 150)) &&
+             (!('avatar' in data) || (data.avatar is string && data.avatar.size() <= 300)) &&
              (!('pointsByLanguage' in data) || (data.pointsByLanguage is map)) &&
              (!('badges' in data) || (data.badges is list)) &&
              (!('globalStats' in data) || (data.globalStats is map)) &&
-             (!('lastActive' in data) || (data.lastActive is timestamp)); 
+             (!('lastActive' in data) || (data.lastActive is timestamp)) &&
+             (!('createdAt' in data) || (data.createdAt is timestamp));
     }
 
     function isValidUserProgress(data) {
       return data.keys().hasAll(['language', 'overallLevel', 'sectionLevels']) &&
-             data.keys().size() <= 12 &&
+             data.keys().size() <= 15 &&
              data.language is string &&
              data.overallLevel is string &&
              data.sectionLevels is map &&
@@ -56,13 +58,14 @@ service cloud.firestore {
 
     function isValidScore(data) {
       return data.keys().hasAll(['userId', 'language', 'score', 'timestamp']) &&
-             data.keys().size() <= 10 &&
+             data.keys().size() <= 12 &&
              data.userId == request.auth.uid &&
              data.language is string && data.language.size() <= 20 &&
              data.score is number && data.score >= 0 && data.score <= 100 &&
              data.timestamp == request.time &&
-             (!('userName' in data) || (data.userName is string && data.userName.size() <= 50)) &&
-             (!('userAvatar' in data) || (data.userAvatar is string && data.userAvatar.size() <= 100));
+             (!('userName' in data) || (data.userName is string && data.userName.size() <= 100)) &&
+             (!('userAvatar' in data) || (data.userAvatar is string && data.userAvatar.size() <= 300)) &&
+             (!('xpGained' in data) || (data.xpGained is number));
     }
 
     // --- Routes ---
@@ -70,10 +73,15 @@ service cloud.firestore {
     match /users/{userId} {
       allow get: if true; // Public profiles for leaderboard
       allow list: if true; // To find top users
-      allow create: if isOwner(userId) && isValidUser(incoming());
-      allow update: if isOwner(userId) && isValidUser(incoming()) && (
-        // Only allow updating XP, points, badges and display info
-        incoming().diff(existing()).affectedKeys().hasOnly(['totalXp', 'pointsByLanguage', 'badges', 'displayName', 'avatar', 'lastActive', 'globalStats'])
+      allow create: if isOwner(userId) && (
+        // Allow full profile creation
+        isValidUser(incoming()) || 
+        // Allow partial creation from globalStats sync if needed (though we prefer full)
+        (incoming().keys().hasOnly(['globalStats', 'lastActive', 'displayName', 'totalXp']))
+      );
+      allow update: if isOwner(userId) && (
+        // Action: Generic update
+        (isValidUser(incoming()) && incoming().diff(existing()).affectedKeys().hasOnly(['totalXp', 'pointsByLanguage', 'badges', 'displayName', 'avatar', 'lastActive', 'globalStats', 'email']))
       );
 
       match /progress/{language} {

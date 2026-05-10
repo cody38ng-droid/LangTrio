@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Dialog, 
   DialogContent, 
@@ -16,25 +16,49 @@ import {
   updateProfile,
   signInWithPopup,
 } from 'firebase/auth';
-import { auth, googleProvider, db } from '@/lib/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { auth, googleProvider, db, handleFirestoreError, OperationType } from '@/lib/firebase';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { LogIn, UserPlus, Mail, Lock, User } from 'lucide-react';
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialMode?: 'login' | 'signup';
 }
 
-export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
-  const [isLogin, setIsLogin] = useState(true);
+export const AuthModal = ({ isOpen, onClose, initialMode = 'login' }: AuthModalProps) => {
+  const [isLogin, setIsLogin] = useState(initialMode === 'login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  useEffect(() => {
+    if (isOpen) {
+      setIsLogin(initialMode === 'login');
+    }
+  }, [isOpen, initialMode]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Basic validation
+    if (!email || !password) {
+      toast.error("Please fill in all fields.");
+      return;
+    }
+
+    if (!isLogin && !displayName) {
+      toast.error("Please enter your full name.");
+      return;
+    }
+
+    if (password.length < 6) {
+      toast.error("Password must be at least 6 characters long.");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -43,20 +67,53 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
         toast.success("Welcome back!");
       } else {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        
+        // Update Firebase Auth profile
         await updateProfile(userCredential.user, {
           displayName: displayName
         });
         
-        // Ensure name is synced to Firestore
+        // Initialize user data in Firestore
         const userRef = doc(db, 'users', userCredential.user.uid);
-        await setDoc(userRef, { displayName: displayName }, { merge: true });
+        try {
+          await setDoc(userRef, { 
+            displayName: displayName,
+            email: email,
+            createdAt: serverTimestamp(),
+            totalXp: 0,
+            globalStats: {
+              streak: 1,
+              lastCheckIn: new Date().toISOString(),
+              unlockedBackgrounds: ['default']
+            },
+            lastActive: serverTimestamp()
+          }, { merge: true });
+        } catch (err) {
+          handleFirestoreError(err, OperationType.WRITE, `users/${userCredential.user.uid}`);
+        }
         
         toast.success("Account created! Welcome to Lang Trio.");
       }
       onClose();
+      // Clear fields on success
+      setEmail('');
+      setPassword('');
+      setDisplayName('');
     } catch (error: any) {
       console.error("Auth error:", error);
-      toast.error(error.message || "Authentication failed. Please check your credentials.");
+      let message = "Authentication failed.";
+      
+      if (error.code === 'auth/email-already-in-use') {
+        message = "This email is already in use.";
+      } else if (error.code === 'auth/invalid-email') {
+        message = "Invalid email address.";
+      } else if (error.code === 'auth/weak-password') {
+        message = "Password is too weak.";
+      } else if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        message = "Invalid email or password.";
+      }
+      
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
@@ -64,17 +121,21 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
 
   const handleGoogleLogin = async () => {
     try {
+      setIsLoading(true);
       await signInWithPopup(auth, googleProvider);
       toast.success("Successfully logged in with Google!");
       onClose();
     } catch (error) {
+      console.error("Google Auth error:", error);
       toast.error("Google authentication failed.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px] rounded-3xl p-8 border-none shadow-2xl">
+      <DialogContent className="sm:max-w-[425px] rounded-3xl p-8 border-none shadow-2xl overflow-hidden">
         <DialogHeader className="space-y-3">
           <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center mb-2 mx-auto">
             {isLogin ? <LogIn className="text-primary w-6 h-6" /> : <UserPlus className="text-primary w-6 h-6" />}
@@ -103,7 +164,7 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   className="pl-10 h-12 rounded-xl bg-muted/50 border-none focus:ring-2 focus:ring-primary/20"
-                  required
+                  required={!isLogin}
                 />
               </div>
             </div>
@@ -146,8 +207,9 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
           </div>
 
           <Button 
+            type="submit"
             disabled={isLoading} 
-            className="w-full h-12 rounded-xl font-black text-lg shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
+            className="w-full h-12 rounded-xl font-black text-lg shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all bg-primary hover:bg-primary/90"
           >
             {isLoading ? "Processing..." : isLogin ? "Sign In" : "Create Account"}
           </Button>
