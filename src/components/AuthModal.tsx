@@ -51,7 +51,7 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
         const userRef = doc(db, 'users', userCredential.user.uid);
         await setDoc(userRef, { displayName: displayName }, { merge: true });
         
-        toast.success("Account created! Welcome to LingoLeap.");
+        toast.success("Account created! Welcome to Lang Trio.");
       }
       onClose();
     } catch (error: any) {

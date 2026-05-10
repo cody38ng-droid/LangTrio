@@ -1,4 +1,4 @@
-# Security Specification for LingoLeap
+# Security Specification for Lang Trio
 
 ## Data Invariants
 1. A user can only modify their own profile document.

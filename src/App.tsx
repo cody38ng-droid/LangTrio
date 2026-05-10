@@ -1087,26 +1087,27 @@ export default function App() {
         animate={{ opacity: 1, y: 0 }}
         className="text-center space-y-4"
       >
-        <h1 className={`text-6xl font-black tracking-tighter drop-shadow-sm ${selectedBg === 'midnight' ? 'text-white' : 'text-primary'}`}>LingoLeap</h1>
+        <h1 className={`text-6xl font-black tracking-tighter drop-shadow-sm ${selectedBg === 'midnight' ? 'text-white' : 'text-primary'}`}>Lang Trio</h1>
         <p className={`text-xl font-medium ${selectedBg === 'midnight' ? 'text-slate-300' : 'text-muted-foreground'}`}>Master a new language with AI-powered practice</p>
       </motion.div>
 
-      <div className="flex gap-4 mb-4">
+      <div className="flex flex-wrap items-center justify-center gap-3 px-4 mb-4">
         <Button 
           variant="outline" 
           size="lg" 
-          className={`rounded-full px-8 shadow-lg backdrop-blur-sm ${selectedBg === 'midnight' ? 'bg-slate-800 border-slate-700 text-white hover:bg-slate-700' : 'border-primary text-primary hover:bg-primary hover:text-white bg-white/50'}`}
+          className={`rounded-full px-6 md:px-8 h-12 md:h-14 shadow-xl backdrop-blur-md border-2 transition-all active:scale-95 ${selectedBg === 'midnight' ? 'bg-slate-800/80 border-slate-700 text-white hover:bg-slate-700' : 'bg-white/80 border-primary/20 text-primary hover:bg-primary/10'}`}
           onClick={() => setShowGeneralDashboard(true)}
         >
-          <Trophy className="mr-2 w-5 h-5 text-yellow-500" /> Progress & Global Ranks
+          <Trophy className="mr-2 w-5 h-5 text-yellow-500 animate-pulse" /> 
+          <span className="font-black tracking-tight text-sm md:text-base">Global Ranks</span>
         </Button>
-        <div className={`flex items-center px-6 rounded-full shadow-lg backdrop-blur-sm border ${selectedBg === 'midnight' ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white/50 border-primary/20 text-primary'}`}>
-          <span className="text-lg font-bold">🔥 {globalStats.streak} Day Streak</span>
+        <div className={`flex items-center px-6 h-12 md:h-14 rounded-full shadow-xl backdrop-blur-md border-2 transition-all ${selectedBg === 'midnight' ? 'bg-slate-800/80 border-slate-700 text-white' : 'bg-white/80 border-primary/20 text-primary'}`}>
+          <span className="text-sm md:text-lg font-black tracking-tight whitespace-nowrap">🔥 {globalStats.streak} Day Streak</span>
         </div>
         <Button 
           variant="ghost" 
-          size="lg" 
-          className={`rounded-full px-6 ${selectedBg === 'midnight' ? 'text-white hover:bg-slate-800' : ''}`}
+          size="icon" 
+          className={`rounded-full w-12 h-12 md:w-14 md:h-14 shadow-lg backdrop-blur-md border-2 ${selectedBg === 'midnight' ? 'bg-slate-800/80 border-slate-700 text-white hover:bg-slate-700' : 'bg-white/80 border-primary/20 text-primary hover:bg-primary/10'}`}
           onClick={() => setBgMusicEnabled(!bgMusicEnabled)}
         >
           {bgMusicEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
@@ -1900,7 +1901,7 @@ export default function App() {
             <div className="bg-primary p-2 rounded-xl shadow-lg shadow-primary/20">
               <GraduationCap className="text-white w-6 h-6" />
             </div>
-            <span className="text-2xl font-black tracking-tighter text-primary">LingoLeap</span>
+            <span className="text-2xl font-black tracking-tighter text-primary">Lang Trio</span>
           </div>
           
           <div className="flex items-center space-x-4">
