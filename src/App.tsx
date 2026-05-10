@@ -1929,12 +1929,12 @@ export default function App() {
       </div>
 
       <nav className={`border-b sticky top-0 z-50 transition-colors ${selectedBg === 'midnight' ? 'bg-slate-900/80 border-slate-800' : 'bg-white/80 backdrop-blur-md'}`}>
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center space-x-3 cursor-pointer" onClick={() => { setLanguage(null); setCurrentModule(null); setShowBreakGame(false); }}>
-            <div className="bg-primary p-2 rounded-xl shadow-lg shadow-primary/20">
-              <GraduationCap className="text-white w-6 h-6" />
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
+          <div className="flex items-center space-x-2 sm:space-x-3 cursor-pointer" onClick={() => { setLanguage(null); setCurrentModule(null); setShowBreakGame(false); }}>
+            <div className="bg-primary p-1.5 sm:p-2 rounded-lg sm:rounded-xl shadow-lg shadow-primary/20">
+              <GraduationCap className="text-white w-5 h-5 sm:w-6 sm:h-6" />
             </div>
-            <span className="text-2xl font-black tracking-tighter text-primary">Lang Trio</span>
+            <span className="text-xl sm:text-2xl font-black tracking-tighter text-primary">Lang Trio</span>
           </div>
           
           <div className="flex items-center space-x-2 md:space-x-4">
@@ -1973,10 +1973,11 @@ export default function App() {
                 <Button 
                   variant="default" 
                   size="sm" 
-                  className="bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-105 transition-all"
+                  className="bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-105 transition-all px-3 sm:px-4"
                   onClick={handleSignUp}
                 >
-                  Sign Up
+                  <span className="hidden sm:inline">Sign Up</span>
+                  <span className="sm:hidden">Join</span>
                 </Button>
               </>
             )}
@@ -1988,15 +1989,16 @@ export default function App() {
             <Button 
                variant="ghost"
                size="sm" 
-               className="text-primary font-bold hover:bg-primary/10"
+               className={`font-bold rounded-xl transition-all hover:scale-105 active:scale-95 ${selectedBg === 'midnight' ? 'text-white hover:bg-slate-800' : 'text-primary hover:bg-primary/5'}`}
                onClick={() => setLeaderboardOpen({ open: true, lang: language })}
             >
-              <Trophy className="mr-2 w-4 h-4" /> Leaderboard
+              <Trophy className="w-4 h-4 sm:mr-2" /> 
+              <span className="hidden sm:inline">Leaderboard</span>
             </Button>
             <Button 
               variant={isAIChatOpen ? "default" : "outline"}
               size="icon" 
-              className={`w-12 h-12 rounded-full shadow-lg transition-all duration-300 hover:scale-110 active:scale-95 flex items-center justify-center ${
+              className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full shadow-lg transition-all duration-300 hover:scale-110 active:scale-95 flex items-center justify-center ${
                 isAIChatOpen 
                   ? 'bg-primary ring-4 ring-primary/20 scale-105' 
                   : 'bg-white border-2 border-primary text-primary hover:bg-primary/5 hover:border-primary/80'
@@ -2004,16 +2006,17 @@ export default function App() {
               onClick={() => setIsAIChatOpen(!isAIChatOpen)}
               title="AI Coach"
             >
-              <Bot className={`${isAIChatOpen ? 'w-7 h-7' : 'w-6 h-6'}`} />
+              <Bot className={`${isAIChatOpen ? 'w-6 h-6 sm:w-7 sm:h-7' : 'w-5 h-5 sm:w-6 sm:h-6'}`} />
             </Button>
             {language && progress[language] && (
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="text-primary font-bold hover:bg-primary/10"
+                className={`font-bold rounded-xl transition-all hover:scale-105 active:scale-95 ${selectedBg === 'midnight' ? 'text-white hover:bg-slate-800' : 'text-primary hover:bg-primary/5'}`}
                 onClick={() => setShowBreakGame(true)}
               >
-                <Gamepad2 className="mr-2 w-4 h-4" /> Break Game
+                <Gamepad2 className="w-4 h-4 sm:mr-2" /> 
+                <span className="hidden sm:inline">Break Game</span>
               </Button>
             )}
             {language && progress[language] && (
